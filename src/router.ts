@@ -14,12 +14,14 @@ import {
     hasAllowance,
     isEth,
     toBN,
-    BN,
     parseUnits,
     _cutZeros,
     ETH_ADDRESS,
+    _get_small_x,
+    _get_price_impact,
 } from "./utils";
 import { getPool } from "./pools";
+import { _getAmplificationCoefficientsFromApi } from "./pools/utils";
 
 const MAX_ROUTES_FOR_ONE_COIN = 3;
 
@@ -36,7 +38,7 @@ export const _findAllRoutesTheShorterTheBetter = async (inputCoinAddress: string
 
     const basePoolsSet: Set<string> = new Set();
     for (const pool of ALL_POOLS) {
-        if (pool[1].base_pool) basePoolsSet.add(pool[1].base_pool);
+        if (pool[1].wrapped_coin_addresses.length < 4) basePoolsSet.add(pool[0]);
     }
     const basePoolIds = Array.from(basePoolsSet);
 
@@ -69,24 +71,24 @@ export const _findAllRoutesTheShorterTheBetter = async (inputCoinAddress: string
                     meta_coin: meta_coin_addresses ? meta_coin_addresses.indexOf(inCoin) : -1,
                 }
 
-                // LP -> underlying coin "swaps" (actually remove_liquidity_one_coin)
+                // LP -> wrapped coin "swaps" (actually remove_liquidity_one_coin)
                 if (basePoolIds.includes(poolId) && inCoin === token_address) {
-                    for (let j = 0; j < underlying_coin_addresses.length; j++) {
+                    for (let j = 0; j < wrapped_coin_addresses.length; j++) {
                         // If this coin already marked or will be marked on the current step, no need to consider it on the next step
-                        if (markedCoins.includes(underlying_coin_addresses[j]) || curCoins.includes(underlying_coin_addresses[j])) continue;
+                        if (markedCoins.includes(wrapped_coin_addresses[j]) || curCoins.includes(wrapped_coin_addresses[j])) continue;
                         // Looking for outputCoinAddress only on the final step
-                        if (step === 3 && underlying_coin_addresses[j] !== outputCoinAddress) continue;
+                        if (step === 3 && wrapped_coin_addresses[j] !== outputCoinAddress) continue;
 
-                        const swapType = poolId === 'aave' ? 10 : 9;
+                        const swapType = poolId === 'aave' ? 11 : 10;
                         for (const inCoinRoute of routes[inCoin]) {
-                            routes[underlying_coin_addresses[j]] = (routes[underlying_coin_addresses[j]] ?? []).concat(
+                            routes[wrapped_coin_addresses[j]] = (routes[wrapped_coin_addresses[j]] ?? []).concat(
                                 [[
                                     ...inCoinRoute,
                                     {
                                         poolId,
                                         poolAddress: poolData.swap_address,
                                         inputCoinAddress: inCoin,
-                                        outputCoinAddress: underlying_coin_addresses[j],
+                                        outputCoinAddress: wrapped_coin_addresses[j],
                                         i: 0,
                                         j,
                                         swapType,
@@ -96,18 +98,18 @@ export const _findAllRoutesTheShorterTheBetter = async (inputCoinAddress: string
                             );
                         }
 
-                        nextCoins.add(underlying_coin_addresses[j]);
+                        nextCoins.add(wrapped_coin_addresses[j]);
                     }
                 }
 
-                // Underlying coin -> LP "swaps" (actually add_liquidity)
-                if (basePoolIds.includes(poolId) && underlying_coin_addresses.includes(inCoin)) {
+                // Wrapped coin -> LP "swaps" (actually add_liquidity)
+                if (basePoolIds.includes(poolId) && wrapped_coin_addresses.includes(inCoin)) {
                     // If this coin already marked or will be marked on the current step, no need to consider it on the next step
                     if (markedCoins.includes(token_address) || curCoins.includes(token_address)) continue;
                     // Looking for outputCoinAddress only on the final step
                     if (step === 3 && token_address !== outputCoinAddress) continue;
 
-                    const swapType = is_lending ? 8 : underlying_coin_addresses.length === 2 ? 6 : 7;
+                    const swapType = is_lending ? 9 : wrapped_coin_addresses.length === 2 ? 7 : 8;
                     for (const inCoinRoute of routes[inCoin]) {
                         routes[token_address] = (routes[token_address] ?? []).concat(
                             [[
@@ -117,7 +119,7 @@ export const _findAllRoutesTheShorterTheBetter = async (inputCoinAddress: string
                                     poolAddress: poolData.swap_address,
                                     inputCoinAddress: inCoin,
                                     outputCoinAddress: token_address,
-                                    i: underlying_coin_addresses.indexOf(inCoin),
+                                    i: wrapped_coin_addresses.indexOf(inCoin),
                                     j: 0,
                                     swapType,
                                     swapAddress: ethers.constants.AddressZero,
@@ -186,7 +188,11 @@ export const _findAllRoutesTheShorterTheBetter = async (inputCoinAddress: string
                         if (tvl === 0) continue;
 
                         const hasEth = (inCoin === curve.constants.NATIVE_TOKEN.address || underlying_coin_addresses[j] === curve.constants.NATIVE_TOKEN.address);
-                        const swapType = (base_pool?.is_lending && poolData.is_factory) ? 5 : hasEth ? 3 : poolData.is_crypto ? 4 : 2;
+                        const swapType = (poolData.is_crypto && poolData.is_meta && poolData.is_factory) ? 6
+                            : (base_pool?.is_lending && poolData.is_factory) ? 5
+                            : hasEth ? 3
+                            : poolData.is_crypto ? 4
+                            : 2;
                         for (const inCoinRoute of routes[inCoin]) {
                             routes[underlying_coin_addresses[j]] = (routes[underlying_coin_addresses[j]] ?? []).concat(
                                 [[
@@ -199,7 +205,7 @@ export const _findAllRoutesTheShorterTheBetter = async (inputCoinAddress: string
                                         i: inCoinIndexes.underlying_coin,
                                         j,
                                         swapType,
-                                        swapAddress: ethers.constants.AddressZero,
+                                        swapAddress: (swapType === 5 || swapType === 6) ? poolData.swap_address : ethers.constants.AddressZero,
                                     },
                                 ]]
                             );
@@ -232,6 +238,7 @@ export const _findAllRoutesTvl = async (inputCoinAddress: string, outputCoinAddr
         ...curve.constants.FACTORY_POOLS_DATA as IDict<IPoolData>,
         ...curve.constants.CRYPTO_FACTORY_POOLS_DATA as IDict<IPoolData>,
     });
+    const amplificationCoefficientDict = await _getAmplificationCoefficientsFromApi();
 
     const basePoolsSet: Set<string> = new Set();
     for (const pool of ALL_POOLS) {
@@ -258,6 +265,7 @@ export const _findAllRoutesTvl = async (inputCoinAddress: string, outputCoinAddr
                 const meta_coin_addresses = base_pool ? base_pool.underlying_coin_addresses.map((a: string) => a.toLowerCase()) : [];
                 const token_address = poolData.token_address.toLowerCase();
                 const is_lending = poolData.is_lending ?? false;
+                const minTvlMultiplier = poolData.is_crypto ? 1 : (amplificationCoefficientDict[poolData.swap_address] ?? 1);
 
                 const inCoinIndexes = {
                     wrapped_coin: wrapped_coin_addresses.indexOf(inCoin),
@@ -279,7 +287,7 @@ export const _findAllRoutesTvl = async (inputCoinAddress: string, outputCoinAddr
                         if (outputCoinIdx >= 0 && j !== outputCoinIdx) continue;
 
                         const tvl = Number(await (getPool(poolId)).stats.totalLiquidity()); // Base pool tvl can't be 0
-                        const swapType = poolId === 'aave' ? 10 : 9;
+                        const swapType = poolId === 'aave' ? 11 : 10;
                         const newRoutes: IRoute_[] = routes[inCoin].map((route) => {
                             const routePoolIds = route.steps.map((s) => s.poolId);
                             // Steps <= 4
@@ -300,7 +308,7 @@ export const _findAllRoutesTvl = async (inputCoinAddress: string, outputCoinAddr
                                         swapAddress: ethers.constants.AddressZero,
                                     },
                                 ],
-                                minTvl: Math.min(tvl, route.minTvl),
+                                minTvl: Math.min(tvl, route.minTvl * minTvlMultiplier),
                             } as IRoute_
                         });
 
@@ -322,7 +330,7 @@ export const _findAllRoutesTvl = async (inputCoinAddress: string, outputCoinAddr
                     if (step === 3 && token_address !== outputCoinAddress) continue;
 
                     const tvl = Number(await (getPool(poolId)).stats.totalLiquidity()); // Base pool tvl can't be 0
-                    const swapType = is_lending ? 8 : underlying_coin_addresses.length === 2 ? 6 : 7;
+                    const swapType = is_lending ? 9 : underlying_coin_addresses.length === 2 ? 7 : 8;  // TODO change for atricrypto3 base pool
                     const newRoutes: IRoute_[] = routes[inCoin].map((route) => {
                         const routePoolIds = route.steps.map((s) => s.poolId);
                         // Steps <= 4
@@ -343,7 +351,7 @@ export const _findAllRoutesTvl = async (inputCoinAddress: string, outputCoinAddr
                                     swapAddress: ethers.constants.AddressZero,
                                 },
                             ],
-                            minTvl: Math.min(tvl, route.minTvl),
+                            minTvl: Math.min(tvl, route.minTvl * minTvlMultiplier),
                         } as IRoute_
                     });
 
@@ -395,7 +403,7 @@ export const _findAllRoutesTvl = async (inputCoinAddress: string, outputCoinAddr
                                         swapAddress: ethers.constants.AddressZero,
                                     },
                                 ],
-                                minTvl: Math.min(tvl, route.minTvl),
+                                minTvl: Math.min(tvl, route.minTvl * minTvlMultiplier),
                             } as IRoute_
                         });
 
@@ -432,7 +440,11 @@ export const _findAllRoutesTvl = async (inputCoinAddress: string, outputCoinAddr
                         if (tvl === 0) continue;
 
                         const hasEth = (inCoin === curve.constants.NATIVE_TOKEN.address || underlying_coin_addresses[j] === curve.constants.NATIVE_TOKEN.address);
-                        const swapType = (base_pool?.is_lending && poolData.is_factory) ? 5 : hasEth ? 3 : poolData.is_crypto ? 4 : 2;
+                        const swapType = (poolData.is_crypto && poolData.is_meta && poolData.is_factory) ? 6
+                            : (base_pool?.is_lending && poolData.is_factory) ? 5
+                            : hasEth ? 3
+                            : poolData.is_crypto ? 4
+                            : 2;
                         const newRoutes: IRoute_[] = routes[inCoin].map((route) => {
                             const routePoolIds = route.steps.map((s) => s.poolId);
                             // Steps <= 4
@@ -450,10 +462,10 @@ export const _findAllRoutesTvl = async (inputCoinAddress: string, outputCoinAddr
                                         i: inCoinIndexes.underlying_coin,
                                         j,
                                         swapType,
-                                        swapAddress: swapType === 5 ? poolData.swap_address : ethers.constants.AddressZero,
+                                        swapAddress: (swapType === 5 || swapType === 6) ? poolData.swap_address : ethers.constants.AddressZero,
                                     },
                                 ],
-                                minTvl: Math.min(tvl, route.minTvl),
+                                minTvl: Math.min(tvl, route.minTvl * minTvlMultiplier),
                             } as IRoute_
                         });
 
@@ -652,36 +664,24 @@ export const swapExpected = async (inputCoin: string, outputCoin: string, amount
     return (await getBestRouteAndOutput(inputCoin, outputCoin, amount))['output'];
 }
 
-export const swapPriceImpact = async (inputCoin: string, outputCoin: string, amount: number | string): Promise<string> => {
+export const swapPriceImpact = async (inputCoin: string, outputCoin: string, amount: number | string): Promise<number> => {
     const [inputCoinAddress, outputCoinAddress] = _getCoinAddresses(inputCoin, outputCoin);
     const [inputCoinDecimals, outputCoinDecimals] = _getCoinDecimals(inputCoinAddress, outputCoinAddress);
     const route = await _getBestRouteAndOutput(inputCoinAddress, outputCoinAddress, amount);
+    const _amount = parseUnits(amount, inputCoinDecimals);
+    const _output = route._output;
 
-    // Find k for which x * k = 10^15 or y * k = 10^15: k = max(10^15 / x, 10^15 / y)
-    // For coins with d (decimals) <= 15: k = min(k, 0.2), and x0 = min(x * k, 10^d)
-    // x0 = min(x * min(max(10^15 / x, 10^15 / y), 0.2), 10^d), if x0 == 0 then priceImpact = 0
-    const target = BN(10 ** 15);
-    const amountIntBN = BN(amount).times(10 ** inputCoinDecimals);
-    const outputIntBN = toBN(route._output, 0);
-    const k = BigNumber.min(BigNumber.max(target.div(amountIntBN), target.div(outputIntBN)), 0.2);
-    const smallAmountIntBN = BigNumber.min(amountIntBN.times(k), BN(10 ** inputCoinDecimals));
-    if (smallAmountIntBN.toFixed(0) === '0') return '0';
+    const smallAmountIntBN = _get_small_x(_amount, _output, inputCoinDecimals, outputCoinDecimals)
+    const amountIntBN = toBN(_amount, 0);
+    if (smallAmountIntBN.gte(amountIntBN)) return 0;
 
     const contract = curve.contracts[curve.constants.ALIASES.registry_exchange].contract;
     const _smallAmount = fromBN(smallAmountIntBN.div(10 ** inputCoinDecimals), inputCoinDecimals);
     const { _route, _swapParams, _factorySwapAddresses } = _getExchangeMultipleArgs(inputCoinAddress, route);
     const _smallOutput = await contract.get_exchange_multiple_amount(_route, _swapParams, _smallAmount, _factorySwapAddresses, curve.constantOptions);
+    const priceImpactBN = _get_price_impact(_amount, _output, _smallAmount, _smallOutput, inputCoinDecimals, outputCoinDecimals);
 
-    const amountBN = BN(amount);
-    const outputBN = toBN(route._output, outputCoinDecimals);
-    const smallAmountBN = toBN(_smallAmount, inputCoinDecimals);
-    const smallOutputBN = toBN(_smallOutput, outputCoinDecimals);
-
-    const rateBN = outputBN.div(amountBN);
-    const smallRateBN = smallOutputBN.div(smallAmountBN);
-    const slippageBN = BN(1).minus(rateBN.div(smallRateBN)).times(100);
-
-    return _cutZeros(slippageBN.toFixed(6)).replace('-', '')
+    return Number(_cutZeros(priceImpactBN.toFixed(4)).replace('-', ''))
 }
 
 export const swapIsApproved = async (inputCoin: string, amount: number | string): Promise<boolean> => {

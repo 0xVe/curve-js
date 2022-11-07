@@ -84,6 +84,7 @@ import raiDepositABI from '../abis/rai/deposit.json';
 import twopoolSwapABI from '../abis/2pool/swap.json';
 import fourpoolSwapABI from '../abis/4pool/swap.json';
 import fraxusdcSwapABI from '../abis/fraxusdc/swap.json';
+import frxethSwapABI from '../abis/frxeth/swap.json';
 import { lowerCasePoolDataAddresses } from "../utils";
 import { IDict, IPoolData } from "../../interfaces";
 
@@ -950,8 +951,8 @@ export const POOLS_DATA_ETHEREUM: IDict<IPoolData> = lowerCasePoolDataAddresses(
     },
 
     ib: {
-        name: "ib",
-        full_name: "ib",
+        name: "ironbank",
+        full_name: "ironbank",
         symbol: "ib",
         reference_asset: 'USD',
         swap_address: '0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF',
@@ -959,7 +960,7 @@ export const POOLS_DATA_ETHEREUM: IDict<IPoolData> = lowerCasePoolDataAddresses(
         gauge_address: '0xF5194c3325202F456c95c1Cf0cA36f8475C1949F',
         is_lending: true,
         underlying_coins: ['DAI', 'USDC', 'USDT'],
-        wrapped_coins: ['iDAI', 'iUSDC', 'iUSDT'],
+        wrapped_coins: ['cyDAI', 'cyUSDC', 'cyUSDT'],
         underlying_coin_addresses: [
             '0x6B175474E89094C44Da98b954EedeAC495271d0F',
             '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
@@ -1575,5 +1576,29 @@ export const POOLS_DATA_ETHEREUM: IDict<IPoolData> = lowerCasePoolDataAddresses(
         swap_abi: eurtusdSwapABI,
         gauge_abi: gaugeV5ABI,
         deposit_abi: eurtusdDepositABI,
+    },
+    frxeth: {
+        name: "frxeth",
+        full_name: "frxeth",
+        symbol: "frxeth",
+        reference_asset: 'ETH',
+        swap_address: "0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577",
+        token_address: "0xf43211935C781D5ca1a41d2041F397B8A7366C7A",
+        gauge_address: "0x2932a86df44Fe8D2A706d8e9c5d51c24883423F5",
+        is_plain: true,
+        underlying_coins: ['ETH', 'frxETH'],
+        wrapped_coins: ['ETH', 'frxETH'],
+        underlying_coin_addresses: [
+            '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+            '0x5E8422345238F34275888049021821E8E08CAa1f',
+        ],
+        wrapped_coin_addresses: [
+            '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+            '0x5E8422345238F34275888049021821E8E08CAa1f',
+        ],
+        underlying_decimals: [18, 18],
+        wrapped_decimals: [18, 18],
+        swap_abi: frxethSwapABI,
+        gauge_abi: gaugeV5ABI,
     },
 });

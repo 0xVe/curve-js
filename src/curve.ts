@@ -11,6 +11,7 @@ import yERC20Abi from './constants/abis/yERC20.json';
 import minterABI from './constants/abis/minter.json';
 import minterChildABI from './constants/abis/minter_child.json';
 import votingEscrowABI from './constants/abis/votingescrow.json';
+import feeDistributorABI from './constants/abis/fee_distributor.json';
 import addressProviderABI from './constants/abis/address_provider.json';
 import gaugeControllerABI from './constants/abis/gaugecontroller.json';
 import routerABI from './constants/abis/router.json';
@@ -494,6 +495,8 @@ class Curve implements ICurve {
             multicallContract: new MulticallContract(this.constants.ALIASES.voting_escrow, votingEscrowABI),
         };
 
+        this.setContract(this.constants.ALIASES.fee_distributor, feeDistributorABI);
+
         this.contracts[this.constants.ALIASES.address_provider] = {
             contract: new Contract(this.constants.ALIASES.address_provider, addressProviderABI, this.signer || this.provider),
             multicallContract: new MulticallContract(this.constants.ALIASES.address_provider, addressProviderABI),
@@ -590,6 +593,28 @@ class Curve implements ICurve {
         }
         this.constants.DECIMALS = { ...this.constants.DECIMALS, ...extractDecimals(this.constants.CRYPTO_FACTORY_POOLS_DATA) };
         this.constants.GAUGES = [ ...this.constants.GAUGES, ...extractGauges(this.constants.CRYPTO_FACTORY_POOLS_DATA) ];
+    }
+
+    async fetchRecentlyDeployedFactoryPool(poolAddress: string): Promise<string> {
+        if (this.chainId === 1313161554) return '';
+
+        const poolData = lowerCasePoolDataAddresses(await getFactoryPoolData.call(this, poolAddress));
+        this.constants.FACTORY_POOLS_DATA = { ...this.constants.FACTORY_POOLS_DATA, ...poolData };
+        this.constants.DECIMALS = { ...this.constants.DECIMALS, ...extractDecimals(this.constants.FACTORY_POOLS_DATA) };
+        this.constants.GAUGES = [ ...this.constants.GAUGES, ...extractGauges(this.constants.FACTORY_POOLS_DATA) ];
+
+        return Object.keys(poolData)[0]  // id
+    }
+
+    async fetchRecentlyDeployedCryptoFactoryPool(poolAddress: string): Promise<string> {
+        if (![1, 137, 250].includes(this.chainId)) return '';
+
+        const poolData = lowerCasePoolDataAddresses(await getCryptoFactoryPoolData.call(this, poolAddress));
+        this.constants.FACTORY_POOLS_DATA = { ...this.constants.FACTORY_POOLS_DATA, ...poolData };
+        this.constants.DECIMALS = { ...this.constants.DECIMALS, ...extractDecimals(this.constants.FACTORY_POOLS_DATA) };
+        this.constants.GAUGES = [ ...this.constants.GAUGES, ...extractGauges(this.constants.FACTORY_POOLS_DATA) ];
+
+        return Object.keys(poolData)[0]  // id
     }
 
     setCustomFeeData(customFeeData: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number }): void {
