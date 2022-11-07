@@ -1,6 +1,6 @@
 {
   "name": "@stableswapfi/curve-js",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "JavaScript library for curve.fi - modified by Mutative",
   "main": "lib/index.js",
   "author": "Macket, Mutative",
