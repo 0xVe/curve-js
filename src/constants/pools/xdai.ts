@@ -3,6 +3,8 @@ import raiSwapABI from '../abis/rai/swap.json';
 import raiZapABI from '../abis/rai/deposit.json';
 import tricryptoSwapABI from '../abis/tricrypto-xdai/swap.json';
 import tricryptoZapABI from '../abis/tricrypto-xdai/zap.json';
+import eureSwapABI from "../abis/eureusd/swap.json";
+import eureDepositABI from "../abis/eureusd/zap.json";
 import gaugeRewardsOnlyABI from '../abis/gauge_rewards_only.json';
 import gaugeChildABI from '../abis/gauge_child.json';
 import streamerABI from '../abis/streamer.json';
@@ -99,5 +101,34 @@ export const POOLS_DATA_XDAI: { [index: string]: IPoolData } = lowerCasePoolData
         gauge_abi: gaugeRewardsOnlyABI, // No use
         deposit_abi: tricryptoZapABI,
     },
-
+    eureusd: {
+        name: "eureusd",
+        full_name: "eureusd",
+        symbol: "eureusd",
+        reference_asset: 'CRYPTO',
+        swap_address: '0x056C6C5e684CeC248635eD86033378Cc444459B0',
+        token_address: '0x0CA1C1eC4EBf3CC67a9f545fF90a3795b318cA4a',
+        gauge_address: '0x0000000000000000000000000000000000000000', // NO GAUGE
+        deposit_address: '0xE3FFF29d4DC930EBb787FeCd49Ee5963DADf60b6',
+        is_meta: true,
+        is_crypto: true,
+        base_pool: '3pool',
+        underlying_coins: ['EURe', 'WXDAI', 'USDC', 'USDT'],
+        wrapped_coins: ['EURe', 'x3CRV'],
+        underlying_coin_addresses: [
+            '0xcB444e90D8198415266c6a2724b7900fb12FC56E',
+            '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d',
+            '0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83',
+            '0x4ECaBa5870353805a9F068101A40E0f32ed605C6',
+        ],
+        wrapped_coin_addresses: [
+            '0xcB444e90D8198415266c6a2724b7900fb12FC56E',
+            '0x1337BedC9D22ecbe766dF105c9623922A27963EC',
+        ],
+        underlying_decimals: [18, 18, 6, 6],
+        wrapped_decimals: [18, 18],
+        swap_abi: eureSwapABI,
+        gauge_abi: gaugeRewardsOnlyABI, // No use
+        deposit_abi: eureDepositABI,
+    },
 });

@@ -11,13 +11,18 @@ const CRYPTO_POOLS = ['tricrypto2', 'eurtusd', 'crveth', 'cvxeth', 'xautusd', 's
 const FACTORY_META_POOLS = ['factory-v2-84', 'factory-v2-80', 'factory-v2-60', 'factory-v2-136']; // ['baoUSD-3CRV-f', 'ELONXSWAP3CRV-f', 'ibbtc/sbtcCRV-f(2)', 'sUSDFRAXBP'];
 const FACTORY_CRYPTO_POOLS = ['factory-crypto-8']; // ['YFIETH-fV2'];
 const FACTORY_CRYPTO_META_POOLS = ['factory-crypto-116', 'factory-crypto-97']; // ['DCHF/3CRV', 'cvxCrv/FraxBP'];
+// const ETHEREUM_POOLS = [...LENDING_POOLS, ...META_POOLS, ...CRYPTO_POOLS];
+// const ETHEREUM_POOLS = [...FACTORY_META_POOLS, ...FACTORY_CRYPTO_POOLS];
+const ETHEREUM_POOLS = ['factory-v2-136']//['compound', 'aave', 'ib', 'gusd', 'mim', 'tricrypto2', 'crveth'];
 
 const POLYGON_MAIN_POOLS = ['aave', 'ren', 'eurtusd', 'eursusd'];
 const POLYGON_FACTORY_META_POOLS = ['factory-v2-11']; // ['FRAX3CRV-f3CRV-f'];
-const POLYGON_FACTORY_CRYPTO_META_POOLS = ['factory-crypto-1']; // ['CRV/TRICRYPTO'];
+const POLYGON_FACTORY_CRYPTO_META_POOLS = ['factory-crypto-1', 'factory-crypto-83']; // ['CRV/TRICRYPTO', 'WMATIC/TRICRYPTO'];
+const POLYGON_POOLS = ['eursusd'];
 
 const AVALANCHE_MAIN_POOLS = ['aave', 'ren'];
 const AVALANCHE_FACTORY_META_POOLS = ['factory-v2-0']; // ['MIM'];
+const AVALANCHE_POOLS = AVALANCHE_FACTORY_META_POOLS;
 
 const ARBITRUM_MAIN_POOLS = ['tricrypto', 'eursusd'];
 const ARBITRUM_FACTORY_META_POOLS = ['factory-v2-0']; // ['MIM'];
@@ -26,22 +31,20 @@ const ARBITRUM_POOLS = [...ARBITRUM_MAIN_POOLS, ...ARBITRUM_FACTORY_META_POOLS];
 const OPTIMISM_FACTORY_META_POOLS = ['factory-v2-0']; // ['sUSD Synthetix'];
 const OPTIMISM_POOLS = [...OPTIMISM_FACTORY_META_POOLS];
 
-const XDAI_MAIN_POOLS = ['rai', 'tricrypto'];
+const XDAI_MAIN_POOLS = ['rai', 'tricrypto', 'eureusd'];
 const XDAI_FACTORY_META_POOLS = ['factory-v2-4']; // ['MAI Stablecoin'];
 const XDAI_POOLS = [...XDAI_MAIN_POOLS, ...XDAI_FACTORY_META_POOLS];
-
-// const ETHEREUM_POOLS = [...LENDING_POOLS, ...META_POOLS, ...CRYPTO_POOLS];
-const ETHEREUM_POOLS = ['factory-v2-136']//['compound', 'aave', 'ib', 'gusd', 'mim', 'tricrypto2', 'crveth'];
-// const ETHEREUM_POOLS = [...FACTORY_META_POOLS, ...FACTORY_CRYPTO_POOLS];
-const POLYGON_POOLS = ['eursusd'];
-const AVALANCHE_POOLS = AVALANCHE_FACTORY_META_POOLS;
 
 const FANTOM_MAIN_POOLS = ['fusdt', 'ib', 'geist'];
 const FANTOM_FACTORY_META_POOLS = ['factory-v2-16', 'factory-v2-40']; // ['FRAX2pool', 'Geist Frax'];
 const FANTOM_POOLS = [...FANTOM_MAIN_POOLS, ...FANTOM_FACTORY_META_POOLS];
 
+// ------------------------------------------
+
+const POOLS_FOR_TESTING = POLYGON_FACTORY_CRYPTO_META_POOLS;
+
 const wrappedLiquidityTest = (id: string) => {
-    describe(`${id} deposit-stake-unstake-withdraw`, function () {
+    describe(`${id} deposit-stake--deposit&stake-unstake-withdraw`, function () {
         let pool: PoolTemplate;
         let coinAddresses: string[];
 
@@ -51,7 +54,7 @@ const wrappedLiquidityTest = (id: string) => {
         });
 
         it('Deposit', async function () {
-            const amount = '10';
+            const amount = '1';
             const amounts = coinAddresses.map(() => amount);
             const initialBalances = await pool.wallet.balances() as IDict<string>;
             const lpTokenExpected = await pool.depositWrappedExpected(amounts)
@@ -89,6 +92,34 @@ const wrappedLiquidityTest = (id: string) => {
 
             assert.strictEqual(depositAmount, balances.gauge);
             assert.strictEqual(Number(balances.lpToken), 0);
+        });
+
+        it('Deposit&stake', async function () {
+            if (pool.isPlain || pool.isFake || pool.gauge === ethers.constants.AddressZero) {
+                console.log('Skip');
+                return;
+            }
+
+            const amount = '1';
+            const amounts = coinAddresses.map(() => amount);
+
+            const initialBalances = await pool.wallet.balances() as IDict<string>;
+            const lpTokenExpected = await pool.depositAndStakeWrappedExpected(amounts);
+
+            await pool.depositAndStakeWrapped(amounts);
+
+            const balances = await pool.wallet.balances() as IDict<string>;
+
+            coinAddresses.forEach((c: string) => {
+                if (['aave', 'saave', 'geist'].includes(id) || (pool.isLending && pool.id === 'ren')) {
+                    assert.approximately(Number(BN(balances[c])), Number(BN(initialBalances[c]).minus(BN(amount).toString())), 1e-2);
+                } else {
+                    assert.deepStrictEqual(BN(balances[c]), BN(initialBalances[c]).minus(BN(amount)));
+                }
+            })
+
+            assert.approximately(Number(balances.gauge) - Number(initialBalances.gauge), Number(lpTokenExpected), 0.01);
+            assert.strictEqual(Number(balances.lpToken) - Number(initialBalances.lpToken), 0);
         });
 
         it('Unstake', async function () {
@@ -187,7 +218,7 @@ const wrappedSwapTest = (id: string) => {
                         if (i >= coinAddresses.length || j >= coinAddresses.length) {
                             console.log('Skip')
                         } else {
-                            const swapAmount = '10';
+                            const swapAmount = '1';
                             const initialCoinBalances = await pool.wallet.wrappedCoinBalances() as IDict<string>;
                             const expected = await pool.swapWrappedExpected(i, j, swapAmount);
 
@@ -221,38 +252,9 @@ describe('Wrapped test', async function () {
         await curve.fetchCryptoFactoryPools();
     });
 
-    // for (const poolId of FACTORY_CRYPTO_META_POOLS) {
-    //     wrappedLiquidityTest(poolId);
-    //     // wrappedSwapTest(poolId);
-    // }
 
-    for (const poolId of POLYGON_FACTORY_CRYPTO_META_POOLS) {
+    for (const poolId of POOLS_FOR_TESTING) {
         wrappedLiquidityTest(poolId);
         wrappedSwapTest(poolId);
     }
-
-    // for (const poolId of AVALANCHE_POOLS) {
-    //     wrappedLiquidityTest(poolId);
-    //     wrappedSwapTest(poolId);
-    // }
-
-    // for (const poolId of FANTOM_POOLS) {
-    //     wrappedLiquidityTest(poolId);
-    //     wrappedSwapTest(poolId);
-    // }
-
-    // for (const poolId of ARBITRUM_POOLS) {
-    //     wrappedLiquidityTest(poolId);
-    //     wrappedSwapTest(poolId);
-    // }
-
-    // for (const poolId of OPTIMISM_POOLS) {
-    //     wrappedLiquidityTest(poolId);
-    //     wrappedSwapTest(poolId);
-    // }
-
-    // for (const poolId of XDAI_POOLS) {
-    //     wrappedLiquidityTest(poolId);
-    //     wrappedSwapTest(poolId);
-    // }
 })

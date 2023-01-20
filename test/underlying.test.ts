@@ -5,7 +5,7 @@ import { PoolTemplate, getPool } from "../src/pools";
 import { BN } from "../src/utils";
 import { IDict } from "../src/interfaces";
 
-const PLAIN_POOLS = ['susd', 'ren', 'sbtc', 'hbtc', '3pool', 'seth', 'eurs', 'steth', 'ankreth', 'link', 'reth', 'eurt', '2pool', '4pool', 'fraxusdc', 'frxeth'];
+const PLAIN_POOLS = ['susd', 'ren', 'sbtc', 'hbtc', '3pool', 'seth', 'eurs', 'steth', 'ankreth', 'link', 'reth', 'eurt', '2pool', '4pool', 'fraxusdc', 'frxeth', 'sbtc2'];
 const LENDING_POOLS = ['compound', 'usdt', 'y', 'busd', 'pax', 'aave', 'saave', 'ib'];
 const META_POOLS = ['gusd', 'husd', 'usdk', 'usdn', 'musd', 'rsv', 'tbtc', 'dusd', 'pbtc', 'bbtc', 'obtc', 'ust', 'usdp', 'tusd', 'frax', 'lusd', 'busdv2', 'alusd', 'mim'];
 const CRYPTO_POOLS = ['tricrypto2', 'eurtusd', 'eursusd', 'crveth', 'cvxeth', 'xautusd', 'spelleth', 'teth', 'euroc'];
@@ -13,20 +13,27 @@ const FACTORY_PLAIN_POOLS = ['factory-v2-3', 'factory-v2-57', 'factory-v2-7']; /
 const FACTORY_META_POOLS = ['factory-v2-84', 'factory-v2-80', 'factory-v2-60', 'factory-v2-136']; // ['baoUSD-3CRV-f', 'ELONXSWAP3CRV-f', 'ibbtc/sbtcCRV-f(2)', 'sUSDFRAXBP'];
 const FACTORY_CRYPTO_POOLS = ['factory-crypto-8', 'factory-crypto-4']; // ['YFIETH-fV2', 'BADGERWBTC-fV2'];
 const FACTORY_CRYPTO_META_POOLS = ['factory-crypto-116', 'factory-crypto-97']; // ['DCHF/3CRV', 'cvxCrv/FraxBP'];
-const POLYGON_MAIN_POOLS = ['aave', 'ren', 'atricrypto3', 'eurtusd', 'eursusd'];
+const ETHEREUM_POOLS = [...PLAIN_POOLS, ...LENDING_POOLS, ...META_POOLS, ...CRYPTO_POOLS];
+// const ETHEREUM_POOLS = [...FACTORY_PLAIN_POOLS, ...FACTORY_META_POOLS, ...FACTORY_CRYPTO_POOLS, ...FACTORY_CRYPTO_META_POOLS];
+// const ETHEREUM_POOLS = ['susd', '3pool', 'compound', 'aave', 'ib', 'gusd', 'mim', 'tricrypto2', 'crveth'];
 
+
+const POLYGON_MAIN_POOLS = ['aave', 'ren', 'atricrypto3', 'eurtusd', 'eursusd'];
 const POLYGON_FACTORY_PLAIN_POOLS = ['factory-v2-113', 'factory-v2-4', 'factory-v2-37']; // ['CRVALRTO-f', '3EUR-f', '4eur-f(2)'];
 const POLYGON_FACTORY_META_POOLS = ['factory-v2-11']; // ['FRAX3CRV-f3CRV-f'];
-const POLYGON_FACTORY_CRYPTO_META_POOLS = ['factory-crypto-1']; // ['CRV/TRICRYPTO'];
+const POLYGON_FACTORY_CRYPTO_META_POOLS = ['factory-crypto-1', 'factory-crypto-83']; // ['CRV/TRICRYPTO', 'WMATIC/TRICRYPTO'];
+const POLYGON_POOLS = [...POLYGON_MAIN_POOLS, ...POLYGON_FACTORY_PLAIN_POOLS, ...POLYGON_FACTORY_META_POOLS, ...POLYGON_FACTORY_CRYPTO_META_POOLS];
 
 const AVALANCHE_MAIN_POOLS = ['aave', 'ren', 'atricrypto'];
 const AVALANCHE_FACTORY_PLAIN_POOLS = ['factory-v2-30', 'factory-v2-4']; // ['USD Coin', '3poolV2'];
 const AVALANCHE_FACTORY_META_POOLS = ['factory-v2-0']; // ['MIM'];
+const AVALANCHE_POOLS = [...AVALANCHE_MAIN_POOLS, ...AVALANCHE_FACTORY_PLAIN_POOLS, ...AVALANCHE_FACTORY_META_POOLS];
 
 const FANTOM_MAIN_POOLS = ['2pool', 'fusdt', 'ren', 'tricrypto', 'ib', 'geist'];
 const FANTOM_FACTORY_PLAIN_POOLS = ['factory-v2-85', 'factory-v2-1', 'factory-v2-7']; // ['axlUSDC/USDC', '3poolV2', '4pool'];
 const FANTOM_FACTORY_META_POOLS = ['factory-v2-16', 'factory-v2-40']; // ['FRAX2pool', 'Geist Frax'];
 const FANTOM_FACTORY_CRYPTO_POOLS = ['factory-crypto-3']; // ['aCRV/CRV'];
+const FANTOM_POOLS = [...FANTOM_MAIN_POOLS, ...FANTOM_FACTORY_PLAIN_POOLS, ...FANTOM_FACTORY_META_POOLS, ...FANTOM_FACTORY_CRYPTO_POOLS];
 
 const ARBITRUM_MAIN_POOLS = ['2pool', 'tricrypto', 'ren', 'eursusd', 'wsteth'];
 const ARBITRUM_FACTORY_PLAIN_POOLS = ['factory-v2-15', 'factory-v2-29']; // ['deBridge-ETH', 'Aave aDAI+aUSC+aUSDT USDFACTORY'];
@@ -38,30 +45,27 @@ const OPTIMISM_FACTORY_PLAIN_POOLS = ['factory-v2-10']; // ['sETH/ETH'];
 const OPTIMISM_FACTORY_META_POOLS = ['factory-v2-0']; // ['sUSD Synthetix'];
 const OPTIMISM_POOLS = [...OPTIMISM_MAIN_POOLS, ...OPTIMISM_FACTORY_PLAIN_POOLS, ...OPTIMISM_FACTORY_META_POOLS];
 
-const XDAI_MAIN_POOLS = ['3pool', 'rai', 'tricrypto'];
+const XDAI_MAIN_POOLS = ['3pool', 'rai', 'tricrypto', 'eureusd'];
 const XDAI_FACTORY_PLAIN_POOLS = ['factory-v2-0']; // ['sGNO/GNO'];
 const XDAI_FACTORY_META_POOLS = ['factory-v2-4']; // ['MAI Stablecoin'];
 const XDAI_POOLS = [...XDAI_MAIN_POOLS, ...XDAI_FACTORY_PLAIN_POOLS, ...XDAI_FACTORY_META_POOLS];
 
 const MOONBEAM_MAIN_POOLS = ['3pool'];
 const MOONBEAM_FACTORY_PLAIN_POOLS = ['factory-v2-6']; // ['DAI Multi Nomad'];
-// const MOONBEAM_FACTORY_META_POOLS = ['factory-v2-4']; // ['MAI Stablecoin'];
-// const MOONBEAM_POOLS = [...MOONBEAM_MAIN_POOLS];
-const MOONBEAM_POOLS = [...MOONBEAM_FACTORY_PLAIN_POOLS];
+const MOONBEAM_POOLS = [...MOONBEAM_MAIN_POOLS, ...MOONBEAM_FACTORY_PLAIN_POOLS];
 
 const AURORA_POOLS = ['3pool'];
 
 const KAVA_POOLS = ['factory-v2-0'];
 
-// const ETHEREUM_POOLS = [...PLAIN_POOLS, ...LENDING_POOLS, ...META_POOLS, ...CRYPTO_POOLS];
-// const ETHEREUM_POOLS = [...FACTORY_PLAIN_POOLS, ...FACTORY_META_POOLS, ...FACTORY_CRYPTO_POOLS];
-const ETHEREUM_POOLS = ['susd', '3pool', 'compound', 'aave', 'ib', 'gusd', 'mim', 'tricrypto2', 'crveth'];
-const POLYGON_POOLS = POLYGON_MAIN_POOLS;
-const AVALANCHE_POOLS = [...AVALANCHE_FACTORY_PLAIN_POOLS, ...AVALANCHE_FACTORY_META_POOLS];
-const FANTOM_POOLS = [...FANTOM_MAIN_POOLS, ...FANTOM_FACTORY_PLAIN_POOLS, ...FANTOM_FACTORY_META_POOLS, ...FANTOM_FACTORY_CRYPTO_POOLS];
+const CELO_POOLS = ['factory-v2-0'];
+
+// ------------------------------------------
+
+const POOLS_FOR_TESTING = POLYGON_FACTORY_CRYPTO_META_POOLS;
 
 const underlyingLiquidityTest = (id: string) => {
-    describe(`${id} deposit-stake-unstake-withdraw`, function () {
+    describe(`${id} deposit-stake-deposit&stake-unstake-withdraw`, function () {
         let pool: PoolTemplate;
         let coinAddresses: string[];
 
@@ -71,7 +75,7 @@ const underlyingLiquidityTest = (id: string) => {
         });
 
         it('Deposit', async function () {
-            const amount = '10';
+            const amount = '1';
             const amounts = coinAddresses.map(() => amount);
             if (id === 'factory-v2-7' && curve.chainId === 1) amounts[3] = '0';
             const initialBalances = await pool.wallet.balances() as IDict<string>;
@@ -109,6 +113,34 @@ const underlyingLiquidityTest = (id: string) => {
             assert.strictEqual(Number(balances.lpToken), 0);
         });
 
+        it('Deposit&stake', async function () {
+            if (pool.gauge === ethers.constants.AddressZero) {
+                console.log('Skip');
+                return;
+            }
+
+            const amount = '1';
+            const amounts = coinAddresses.map(() => amount);
+
+            const initialBalances = await pool.wallet.balances() as IDict<string>;
+            const lpTokenExpected = await pool.depositAndStakeExpected(amounts);
+
+            await pool.depositAndStake(amounts);
+
+            const balances = await pool.wallet.balances() as IDict<string>;
+
+            coinAddresses.forEach((c: string) => {
+                if (id === 'steth') {
+                    assert.approximately(Number(BN(balances[c])), Number(BN(initialBalances[c]).minus(BN(amount).toString())), 1e-18);
+                } else {
+                    assert.deepStrictEqual(BN(balances[c]), BN(initialBalances[c]).minus(BN(amount)));
+                }
+            })
+
+            assert.approximately(Number(balances.gauge) - Number(initialBalances.gauge), Number(lpTokenExpected), 0.01);
+            assert.strictEqual(Number(balances.lpToken) - Number(initialBalances.lpToken), 0);
+        });
+
         it('Unstake', async function () {
             if (pool.gauge === ethers.constants.AddressZero) {
                 console.log('Skip');
@@ -136,8 +168,8 @@ const underlyingLiquidityTest = (id: string) => {
 
             assert.deepStrictEqual(BN(balances.lpToken), BN(initialBalances.lpToken).minus(BN(lpTokenAmount)));
             coinAddresses.forEach((c: string, i: number) => {
-                const delta = ['gusd', 'factory-v2-37'].includes(id) ? 0.011 : ['factory-v2-80'].includes(id) ? 1 : 0.01;
-                assert.approximately(Number(balances[c]) - Number(initialBalances[c]), Number(coinsExpected[i]), delta);
+                const delta = ['gusd', 'factory-v2-37'].includes(id) ? 0.011 : ['factory-v2-80'].includes(id) ? 1 : ['factory-crypto-83'].includes(id) ? 0.1 : 0.01;
+                assert.approximately(Number(balances[c]) - Number(initialBalances[c]), Number(coinsExpected[i]), delta, c);
             })
         });
 
@@ -192,8 +224,8 @@ const underlyingLiquidityTest = (id: string) => {
 
 const underlyingSwapTest = (id: string) => {
     describe(`${id} exchange`, function () {
-        for (let i = 0; i < 5; i++) {
-            for (let j = 0; j < 5; j++) {
+        for (let i = 0; i < 6; i++) {
+            for (let j = 0; j < 6; j++) {
                 if (i !== j) {
                     it(`${i} --> ${j}`, async function () {
                         const pool = getPool(id);
@@ -232,53 +264,8 @@ describe('Underlying test', async function () {
         await curve.fetchCryptoFactoryPools();
     });
 
-    // for (const poolId of FACTORY_CRYPTO_META_POOLS) {
-    //     underlyingLiquidityTest(poolId);
-    //     underlyingSwapTest(poolId);
-    // }
-
-    for (const poolId of POLYGON_FACTORY_CRYPTO_META_POOLS) {
+    for (const poolId of POOLS_FOR_TESTING) {
         underlyingLiquidityTest(poolId);
         underlyingSwapTest(poolId);
     }
-
-    // for (const poolId of AVALANCHE_POOLS) {
-    //     underlyingLiquidityTest(poolId);
-    //     underlyingSwapTest(poolId);
-    // }
-
-    // for (const poolId of FANTOM_POOLS) {
-    //     underlyingLiquidityTest(poolId);
-    //     underlyingSwapTest(poolId);
-    // }
-
-    // for (const poolId of ARBITRUM_POOLS) {
-    //     underlyingLiquidityTest(poolId);
-    //     underlyingSwapTest(poolId);
-    // }
-
-    // for (const poolId of OPTIMISM_POOLS) {
-    //     underlyingLiquidityTest(poolId);
-    //     underlyingSwapTest(poolId);
-    // }
-
-    // for (const poolId of XDAI_POOLS) {
-    //     underlyingLiquidityTest(poolId);
-    //     underlyingSwapTest(poolId);
-    // }
-
-    // for (const poolId of MOONBEAM_POOLS) {
-    //     underlyingLiquidityTest(poolId);
-    //     underlyingSwapTest(poolId);
-    // }
-
-    // for (const poolId of AURORA_POOLS) {
-    //     underlyingLiquidityTest(poolId);
-    //     underlyingSwapTest(poolId);
-    // }
-
-    // for (const poolId of KAVA_POOLS) {
-    //     underlyingLiquidityTest(poolId);
-    //     underlyingSwapTest(poolId);
-    // }
 })

@@ -1,30 +1,16 @@
 import axios from 'axios';
 import { ethers, Contract } from 'ethers';
+import { Contract as MulticallContract } from "ethcall";
 import BigNumber from 'bignumber.js';
-import { IDict, INetworkName } from './interfaces';
+import { IDict, INetworkName, IRewardFromApi } from './interfaces';
 import { curve } from "./curve";
 import { _getPoolsFromApi } from "./external-api";
-import {Contract as MulticallContract} from "ethcall";
+import ERC20Abi from './constants/abis/ERC20.json';
 
 
 export const ETH_ADDRESS = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 export const MAX_ALLOWANCE = ethers.BigNumber.from(2).pow(ethers.BigNumber.from(256)).sub(ethers.BigNumber.from(1));
 
-// bignumber.js
-
-export const BN = (val: number | string): BigNumber => new BigNumber(val);
-
-export const toBN = (n: ethers.BigNumber, decimals = 18): BigNumber => {
-    return BN(ethers.utils.formatUnits(n, decimals));
-}
-
-export const toStringFromBN = (bn: BigNumber, decimals = 18): string => {
-    return bn.toFixed(decimals);
-}
-
-export const fromBN = (bn: BigNumber, decimals = 18): ethers.BigNumber => {
-    return ethers.utils.parseUnits(toStringFromBN(bn, decimals), decimals)
-}
 
 // Formatting numbers
 
@@ -47,6 +33,22 @@ export const formatNumber = (n: number | string, decimals = 18): string => {
 
 export const parseUnits = (n: number | string, decimals = 18): ethers.BigNumber => {
     return ethers.utils.parseUnits(formatNumber(n, decimals), decimals);
+}
+
+// bignumber.js
+
+export const BN = (val: number | string): BigNumber => new BigNumber(checkNumber(val));
+
+export const toBN = (n: ethers.BigNumber, decimals = 18): BigNumber => {
+    return BN(ethers.utils.formatUnits(n, decimals));
+}
+
+export const toStringFromBN = (bn: BigNumber, decimals = 18): string => {
+    return bn.toFixed(decimals);
+}
+
+export const fromBN = (bn: BigNumber, decimals = 18): ethers.BigNumber => {
+    return ethers.utils.parseUnits(toStringFromBN(bn, decimals), decimals)
 }
 
 // -------------------
@@ -261,6 +263,54 @@ export const _getUsdPricesFromApi = async (): Promise<IDict<number>> => {
     return priceDict
 }
 
+export const _getCrvApyFromApi = async (): Promise<IDict<[number, number]>> => {
+    const network = curve.constants.NETWORK_NAME;
+    const promises = [
+        _getPoolsFromApi(network, "main"),
+        _getPoolsFromApi(network, "crypto"),
+        _getPoolsFromApi(network, "factory"),
+        _getPoolsFromApi(network, "factory-crypto"),
+    ];
+    const allTypesExtendedPoolData = await Promise.all(promises);
+    const apyDict: IDict<[number, number]> = {};
+
+    for (const extendedPoolData of allTypesExtendedPoolData) {
+        for (const pool of extendedPoolData.poolData) {
+            if (pool.gaugeAddress) {
+                if (!pool.gaugeCrvApy) {
+                    apyDict[pool.gaugeAddress.toLowerCase()] = [0, 0];
+                } else {
+                    apyDict[pool.gaugeAddress.toLowerCase()] = [pool.gaugeCrvApy[0] ?? 0, pool.gaugeCrvApy[1] ?? 0];
+                }
+            }
+        }
+    }
+
+    return apyDict
+}
+
+export const _getRewardsFromApi = async (): Promise<IDict<IRewardFromApi[]>> => {
+    const network = curve.constants.NETWORK_NAME;
+    const promises = [
+        _getPoolsFromApi(network, "main"),
+        _getPoolsFromApi(network, "crypto"),
+        _getPoolsFromApi(network, "factory"),
+        _getPoolsFromApi(network, "factory-crypto"),
+    ];
+    const allTypesExtendedPoolData = await Promise.all(promises);
+    const rewardsDict: IDict<IRewardFromApi[]> = {};
+
+    for (const extendedPoolData of allTypesExtendedPoolData) {
+        for (const pool of extendedPoolData.poolData) {
+            if (pool.gaugeAddress) {
+                rewardsDict[pool.gaugeAddress.toLowerCase()] = pool.gaugeRewards;
+            }
+        }
+    }
+
+    return rewardsDict
+}
+
 const _usdRatesCache: IDict<{ rate: number, time: number }> = {}
 export const _getUsdRate = async (assetId: string): Promise<number> => {
     if (curve.chainId === 1 && assetId.toLowerCase() === '0x8762db106b2c2a0bccb3a80d1ed41273552616e8') return 0; // RSR
@@ -277,6 +327,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         250: 'fantom',
         1284: 'moonbeam',
         2222: 'kava',
+        42220: 'celo',
         43114: 'avalanche',
         42161: 'arbitrum-one',
         1313161554: 'aurora',
@@ -290,6 +341,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         250: 'fantom',
         1284: 'moonbeam',
         2222: 'kava',
+        42220: 'celo',
         43114: 'avalanche-2',
         42161: 'ethereum',
         1313161554: 'ethereum',
@@ -348,6 +400,7 @@ export const getTVL = async (chainId = curve.chainId): Promise<number> => {
         250: "fantom",
         1284: "moonbeam",
         2222: 'kava',
+        42220: 'celo',
         43114: "avalanche",
         42161: "arbitrum",
         1313161554: "aurora",
@@ -398,6 +451,37 @@ export const _get_price_impact = (
     const small_y_BN = toBN(_small_y, y_decimals);
     const rateBN = y_BN.div(x_BN);
     const smallRateBN = small_y_BN.div(small_x_BN);
+    if (rateBN.gt(smallRateBN)) return BN(0);
 
     return BN(1).minus(rateBN.div(smallRateBN)).times(100);
+}
+
+export const getCoinNamesAndSymbols = async (coins: string[]): Promise<{name: string, symbol: string}[]> => {
+    const coinAddresses = _getCoinAddressesNoCheck(coins);
+
+    const ethIndex = getEthIndex(coinAddresses);
+    if (ethIndex !== -1) {
+        coinAddresses.splice(ethIndex, 1);
+    }
+
+    const contractCalls = [];
+    for (const coinAddr of coinAddresses) {
+        const coinContract = new MulticallContract(coinAddr, ERC20Abi);
+        contractCalls.push(coinContract.name(), coinContract.symbol());
+    }
+    const _response: string[] = await curve.multicallProvider.all(contractCalls);
+
+    if (ethIndex !== -1) {
+        _response.splice(ethIndex * 2, 0, ...['Ethereum', 'ETH']);
+    }
+
+    const res: {name: string, symbol: string}[]  = [];
+    coins.forEach((address: string, i: number) => {
+        res.push({
+            name: _response.shift() as string,
+            symbol: _response.shift() as string,
+        })
+    });
+
+    return res;
 }

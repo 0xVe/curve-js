@@ -389,8 +389,10 @@ const routerSwapTest = async () => {
     console.log(await curve.router.isApproved('DAI', 1000));
     console.log(await curve.router.approve('DAI', 1000));
     const swapTx = await curve.router.swap('DAI', 'CRV', 1000);
-    // OR await curve.router.swap('0x6B175474E89094C44Da98b954EedeAC495271d0F', '0xD533a949740bb3306d119CC777fa900bA034cd52', '10000');
-    console.log(swapTx);
+    // OR await curve.router.swap('0x6B175474E89094C44Da98b954EedeAC495271d0F', '0xD533a949740bb3306d119CC777fa900bA034cd52', '1000');
+    console.log(swapTx.hash);
+    const swappedAmount = await curve.router.getSwappedAmount(swapTx, 'CRV');
+    console.log(swappedAmount);
 
     console.log(await curve.getBalances(['DAI', 'CRV']));
 }
@@ -402,6 +404,7 @@ const boostingTest = async () => {
 
     console.log(await curve.boosting.isApproved(1000));
     console.log(await curve.boosting.approve(1000));
+    console.log(curve.boosting.calcUnlockTime(365));
     await curve.boosting.createLock(1000, 365);
     console.log(await curve.boosting.getCrv());
 
@@ -412,10 +415,12 @@ const boostingTest = async () => {
     await curve.boosting.increaseAmount('500');
     console.log(await curve.boosting.getCrv());
 
-    console.log(await curve.boosting.getLockedAmountAndUnlockTime());
+    const { lockedAmount, unlockTime } = await curve.boosting.getLockedAmountAndUnlockTime();
+    console.log({ lockedAmount, unlockTime });
     console.log(await curve.boosting.getVeCrv());
     console.log(await curve.boosting.getVeCrvPct());
 
+    console.log(curve.boosting.calcUnlockTime(365, unlockTime as number));
     await curve.boosting.increaseUnlockTime(365);
 
     console.log(await curve.boosting.getLockedAmountAndUnlockTime());
@@ -560,15 +565,24 @@ const deployMetaPoolTest = async () => {
     const gaugeAddress = await curve.factory.getDeployedGaugeAddress(deployGaugeTx);
     console.log(gaugeAddress);
 
-    // Deposit & Stake Wrapped
+    // Get created pool
 
     const poolId = await curve.factory.fetchRecentlyDeployedPool(poolAddress);
     console.log(poolId);
     const pool = curve.getPool(poolId);
 
-    await pool.depositAndStakeWrapped([10, 10]); // Initial amounts for stable pool must be equal
+    // Deposit & Stake Wrapped
+
+    await pool.depositAndStakeWrapped([10, 10]); // Initial wrapped amounts for stable metapool must be equal
     const balances = await pool.stats.wrappedBalances();
     console.log(balances);
+
+    // Or deposit & Stake Underlying
+
+    // const amounts = pool.metaUnderlyingSeedAmounts(30);
+    // console.log(amounts);
+    // await pool.depositAndStake(amounts);
+    // console.log(await pool.stats.underlyingBalances());
 }
 
 const deployCryptoPoolTest = async () => {

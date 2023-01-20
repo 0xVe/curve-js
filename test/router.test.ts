@@ -10,7 +10,9 @@ const routerSwapTest = async (coin1: string, coin2: string) => {
     const amount = '1';
     const initialBalances = await curve.getBalances([coin1, coin2]) as string[];
 
-    const output = await curve.router.expected(coin1, coin2, amount);
+    const { route, output } = await curve.router.getBestRouteAndOutput(coin1, coin2, amount);
+    console.log(route);
+    console.log("Output:", output);
     await curve.router.swap(coin1, coin2, amount);
 
     const balances = await curve.getBalances([coin1, coin2]) as string[];
@@ -37,10 +39,11 @@ describe('Router swap', async function () {
     // const coins = Object.keys(COINS_POLYGON).filter((c) => c !== 'snx' && c !== 'eurs'); // TODO remove eurs
 
     // ETHEREUM
-    const coins = ['susd', 'dai', 'mim', 'frax', 'crv', 'cvx', 'eth', 'xaut', 'eurt', '3crv', '0x62b9c7356a2dc64a1969e19c23e4f579f9810aa7', '0x045da4bfe02b320f4403674b3b7d121737727a36']; // cvxCRV, DCHF
+    // const coins = ['susd', 'dai', 'mim', 'frax', 'crv', 'cvx', 'eth', 'xaut', 'sbtc', 'eurt', '3crv', '0x62b9c7356a2dc64a1969e19c23e4f579f9810aa7', '0x045da4bfe02b320f4403674b3b7d121737727a36']; // cvxCRV, DCHF
 
     // POLYGON
-    // const coins = ['crv', 'dai', 'usdc', 'usdt', 'eurt', 'weth', 'wbtc', 'renbtc', 'amdai', 'amusdc', 'amusdt', 'am3crv', 'matic', '0x45c32fa6df82ead1e2ef74d17b76547eddfaff89']; // frax
+    // const coins = ['crv', 'dai', 'usdc', 'usdt', 'eurt', 'weth', 'wbtc', 'renbtc', 'amdai', 'amusdc', 'amusdt', 'am3crv', 'matic',
+    //     '0x45c32fa6df82ead1e2ef74d17b76547eddfaff89', '0xdAD97F7713Ae9437fa9249920eC8507e5FbB23d3', '0xad326c253a84e9805559b73a08724e11e49ca651']; // frax, atricrypto3 LP, 4eur LP
 
     // AVALANCHE
     // const coins = ['dai.e', 'usdc.e', 'usdt.e', 'weth.e', 'wbtc.e', 'renbtc', 'avdai', 'avusdc', 'avusdt', 'avwbtc', 'av3crv', '0x130966628846bfd36ff31a822705796e8cb8c18d']; // mim
@@ -60,8 +63,8 @@ describe('Router swap', async function () {
     // MOONBEAM
     // const coins = ['dai', 'usdc', 'usdt', '3crv', '0x765277EebeCA2e31912C9946eAe1021199B39C61']; // DAI2
 
-    // AURORA && KAVA TODO add Kava registry_exchange
-    // const coins = ['dai', 'usdc', 'usdt'];
+    // AURORA && KAVA && CELO
+    const coins = ['dai', 'usdc', 'usdt'];
     for (const coin1 of coins) {
         for (const coin2 of coins) {
             if (coin1 !== coin2) {

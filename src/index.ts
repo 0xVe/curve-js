@@ -20,6 +20,7 @@ import {
     swapApprove,
     swapEstimateGas,
     swap,
+    getSwappedAmount,
 } from "./router";
 import { curve as _curve } from "./curve";
 import {
@@ -27,6 +28,7 @@ import {
     getLockedAmountAndUnlockTime,
     getVeCrv,
     getVeCrvPct,
+    calcUnlockTime,
     createLockEstimateGas,
     createLock,
     isApproved,
@@ -50,6 +52,7 @@ import {
     ensureAllowance,
     getUsdRate,
     getTVL,
+    getCoinNamesAndSymbols,
 } from "./utils";
 import {
     deployStablePlainPool,
@@ -121,6 +124,7 @@ const curve = {
     getAllowance,
     hasAllowance,
     ensureAllowance,
+    getCoinNamesAndSymbols,
     factory: {
         deployPlainPool: deployStablePlainPool,
         deployMetaPool: deployStableMetaPool,
@@ -155,6 +159,7 @@ const curve = {
         getLockedAmountAndUnlockTime,
         getVeCrv,
         getVeCrvPct,
+        calcUnlockTime,
         isApproved,
         approve,
         createLock,
@@ -179,6 +184,7 @@ const curve = {
         isApproved: swapIsApproved,
         approve: swapApprove,
         swap,
+        getSwappedAmount,
         estimateGas: {
             approve: swapApproveEstimateGas,
             swap: swapEstimateGas,

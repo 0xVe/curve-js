@@ -17,10 +17,10 @@ import curve from "@curvefi/api";
     await curve.init('JsonRpc', {}, {}); // In this case JsonRpc url, privateKey, fee data and chainId will be specified automatically
 
     // 2. Infura
-    curve.init("Infura", { network: "homestead", apiKey: <INFURA_KEY> }, { chainId: 1 });
+    await curve.init("Infura", { network: "homestead", apiKey: <INFURA_KEY> }, { chainId: 1 });
     
     // 3. Web3 provider
-    curve.init('Web3', { externalProvider: <WEB3_PROVIDER> }, { chainId: 1 });
+    await curve.init('Web3', { externalProvider: <WEB3_PROVIDER> }, { chainId: 1 });
     
     // Fetch factory pools
     await curve.fetchFactoryPools();
@@ -964,12 +964,14 @@ import curve from "@curvefi/api";
 
 (async () => {
     await curve.init('JsonRpc', {}, { gasPrice: 0, maxFeePerGas: 0, maxPriorityFeePerGas: 0 });
+    await curve.fetchFactoryPools();
+    await curve.getCryptoFactoryPoolList();
 
     await curve.getBalances(['DAI', 'CRV']);
     // [ '9900.0', '100049.744832225238317557' ]
 
     const { route, output } = await curve.router.getBestRouteAndOutput('DAI', 'CRV', '1000');
-    // OR await curve.router.getBestPoolAndOutput('0x6B175474E89094C44Da98b954EedeAC495271d0F', '0xD533a949740bb3306d119CC777fa900bA034cd52', '1000');
+    // OR await curve.router.getBestRouteAndOutput('0x6B175474E89094C44Da98b954EedeAC495271d0F', '0xD533a949740bb3306d119CC777fa900bA034cd52', '1000');
     const expected = await curve.router.expected('DAI', 'CRV', '1000');
     // OR await curve.router.expected('0x6B175474E89094C44Da98b954EedeAC495271d0F', '0xD533a949740bb3306d119CC777fa900bA034cd52', '1000');
     const priceImpact = await curve.router.priceImpact('DAI', 'CRV', '1000');
@@ -1018,8 +1020,10 @@ import curve from "@curvefi/api";
     // ]
     const swapTx = await curve.router.swap('DAI', 'CRV', '1000');
     // OR const swapTx = await curve.router.swap('0x6B175474E89094C44Da98b954EedeAC495271d0F', '0xD533a949740bb3306d119CC777fa900bA034cd52', '1000');
-    console.log(swapTx);
+    console.log(swapTx.hash);
     // 0xc7ba1d60871c0295ac5471bb602c37ec0f00a71543b3a041308ebd91833f26ba
+    const swappedAmount = await curve.router.getSwappedAmount(swapTx, 'CRV');
+    // 1573.668171170839785062
 
     await curve.getBalances(['DAI', 'CRV']);
     // [ '8900.0', '100428.626463428100672494' ]
@@ -1051,6 +1055,8 @@ import curve from "@curvefi/api";
     //     '0x07f6daedb705446cb56ab42c18ba9ec5302ef5ed9c7ef0bb5c3c92493abcfc79'
     // ]
     
+    curve.boosting.calcUnlockTime(365);  // now (by default) + 365 days, rounded down by WEEK
+    // 1657152000000
     await curve.boosting.createLock(1000, 365);
     // 99000.0 CRV
     // { lockedAmount: '1000.0', unlockTime: 1657152000000 }
@@ -1063,6 +1069,9 @@ import curve from "@curvefi/api";
     // 372.289692732093137414 veCRV
     // 0.000009285953543912 veCRV %
 
+    const { unlockTime: currentUnlockTime } = await curve.boosting.getLockedAmountAndUnlockTime();
+    curve.boosting.calcUnlockTime(365, currentUnlockTime);  // currentUnlockTime + 365 days, rounded down by WEEK
+    // 1688601600000
     await curve.boosting.increaseUnlockTime(365);
     // 98500.0 CRV
     // { lockedAmount: '1500.0', unlockTime: 1688601600000 }
@@ -1370,15 +1379,24 @@ import curve from "@curvefi/api";
     const gaugeAddress = await curve.factory.getDeployedGaugeAddress(deployGaugeTx);
     // 0x326290a1b0004eee78fa6ed4f1d8f4b2523ab669
 
-    // Deposit & Stake Wrapped
+    // Get created pool
 
     const poolId = await curve.factory.fetchRecentlyDeployedPool(poolAddress);
     // factory-v2-222
     const pool = curve.getPool(poolId);
 
-    await pool.depositAndStakeWrapped([10, 10]); // Initial amounts for stable pool must be equal
+    // Deposit & Stake Wrapped
+    
+    await pool.depositAndStakeWrapped([10, 10]); // Initial wrapped amounts for stable metapool must be equal
     const balances = await pool.stats.wrappedBalances();
     // [ '10.0', '10.0' ]
+
+    // Or deposit & Stake Underlying
+
+    // const amounts = pool.metaUnderlyingSeedAmounts(30);
+    // [ '30', '10.000000000000000000', '10.000000', '10.000000' ]
+    // await pool.depositAndStake(amounts);
+    // [ '30.0', '9.272021785560442569', '8.927595', '11.800485' ]
 })()
 ```
 

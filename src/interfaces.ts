@@ -74,10 +74,17 @@ export interface ICoinFromPoolDataApi {
 export interface IReward {
     gaugeAddress: string,
     tokenAddress: string,
-    tokenPrice?: number,
-    name?: string,
     symbol: string,
-    decimals?: number,
+    apy: number
+}
+
+export interface IRewardFromApi {
+    gaugeAddress: string,
+    tokenAddress: string,
+    tokenPrice: number,
+    name: string,
+    symbol: string,
+    decimals: number,
     apy: number
 }
 
@@ -92,10 +99,11 @@ export interface IPoolDataFromApi {
     implementation: string,
     implementationAddress: string,
     coins: ICoinFromPoolDataApi[],
-    gaugeRewards?: IReward[],
+    gaugeRewards: IRewardFromApi[],
     usdTotal: number,
     totalSupply: number,
     amplificationCoefficient: string,
+    gaugeCrvApy: [number | null, number | null],
 }
 
 export interface ISubgraphPoolData {
@@ -118,13 +126,14 @@ export interface IRouteStep {
     outputCoinAddress: string,
     i: number,
     j: number,
-    swapType: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11,
+    swapType: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15,
     swapAddress: string,  // for swapType == 4
 }
 
 export interface IRoute_ {
     steps: IRouteStep[],
     minTvl: number,
+    totalTvl: number,
 }
 
 export interface IRoute {

@@ -27,20 +27,10 @@ export const _getSubgraphData = memoize(
     }
 )
 
-export const _getMainPoolsGaugeRewards = memoize(async (): Promise<IDict<IReward[]>> => {
-    const url = "https://api.curve.fi/api/getMainPoolsGaugeRewards";
-    const response = await axios.get(url, { validateStatus: () => true });
-    return response.data.data.mainPoolsGaugeRewards;
-},
-{
-    promise: true,
-    maxAge: 5 * 60 * 1000, // 5m
-});
-
 // Moonbeam and Aurora only
 export const _getLegacyAPYsAndVolumes = memoize(
     async (network: string): Promise<IDict<{ apy: { day: number, week: number }, volume: number }>> => {
-        if (curve.chainId === 2222) return {}; // Exclude Kava
+        if (curve.chainId === 2222 || curve.chainId === 42220) return {}; // Exclude Kava and Celo
         const url = `https://stats.curve.fi/raw-stats-${network}/apys.json`;
         const data = (await axios.get(url, { validateStatus: () => true })).data;
         const result: IDict<{ apy: { day: number, week: number }, volume: number }> = {};
@@ -59,15 +49,41 @@ export const _getLegacyAPYsAndVolumes = memoize(
     }
 )
 
-// Moonbeam and Kava only
+// Moonbeam, Kava and Celo only
 export const _getFactoryAPYsAndVolumes = memoize(
     async (network: string): Promise<{ poolAddress: string, apy: number, volume: number }[]> => {
-        if (curve.chainId !== 1284 && curve.chainId !== 2222) return [];
+        if (curve.chainId === 1313161554) return [];  // Exclude Aurora
 
         const url = `https://api.curve.fi/api/getFactoryAPYs-${network}`;
         const response = await axios.get(url, { validateStatus: () => true });
 
         return response.data.data.poolDetails ?? [];
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    }
+)
+
+export const _getAllGauges = memoize(
+    async (): Promise<IDict<{ gauge: string, is_killed?: boolean }>> => {
+        const url = `https://api.curve.fi/api/getAllGauges`;
+        const response = await axios.get(url, { validateStatus: () => true });
+
+        return response.data.data;
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    }
+)
+
+export const _getHiddenPools = memoize(
+    async (): Promise<IDict<string[]>> => {
+        const url = `https://api.curve.fi/api/getHiddenPools`;
+        const response = await axios.get(url, { validateStatus: () => true });
+
+        return response.data.data;
     },
     {
         promise: true,
